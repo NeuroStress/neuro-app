@@ -12,12 +12,23 @@ import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
 
+/**
+ * Менеджер для работы с Google Fit API.
+ * Обеспечивает получение данных о пульсе и HRV пользователя.
+ *
+ * @property context Контекст приложения.
+ */
 class FitManager(private val context: Context) {
     private val fitnessOptions = FitnessOptions.builder()
         .addDataType(DataType.TYPE_HEART_RATE_BPM, FitnessOptions.ACCESS_READ)
         .addDataType(DataType.TYPE_HEART_RATE_VARIABILITY_SDNN, FitnessOptions.ACCESS_READ)
         .build()
 
+    /**
+     * Получает последнее значение пульса пользователя за последние 5 минут.
+     * @return Значение пульса в ударах в минуту (bpm).
+     * @throws IllegalStateException если не удалось получить данные.
+     */
     suspend fun getLatestHeartRate(): Float {
         val account = getSignedInAccount()
         val readRequest = DataReadRequest.Builder()
@@ -35,6 +46,11 @@ class FitManager(private val context: Context) {
             ?.getValue(it.dataType.fields[0])?.asFloat() ?: 0f
     }
 
+    /**
+     * Получает последнее значение HRV (вариабельности сердечного ритма) пользователя за последние 5 минут.
+     * @return Значение HRV в миллисекундах (SDNN).
+     * @throws IllegalStateException если не удалось получить данные.
+     */
     suspend fun getLatestHrv(): Float {
         val account = getSignedInAccount()
         val readRequest = DataReadRequest.Builder()
@@ -52,6 +68,11 @@ class FitManager(private val context: Context) {
             ?.getValue(it.dataType.fields[0])?.asFloat() ?: 0f
     }
 
+    /**
+     * Получает аккаунт Google с необходимыми разрешениями для доступа к Google Fit.
+     * @return Аккаунт Google с разрешениями для доступа к данным о пульсе и HRV.
+     * @throws IllegalStateException если не удалось получить аккаунт или разрешения.
+     */
     private suspend fun getSignedInAccount(): GoogleSignInAccount {
         val account = GoogleSignIn.getLastSignedInAccount(context)
         if (account != null && GoogleSignIn.hasPermissions(account, fitnessOptions)) {
@@ -63,7 +84,6 @@ class FitManager(private val context: Context) {
             .build()
 
         val signInClient = GoogleSignIn.getClient(context, signInOptions)
-        val signInIntent = signInClient.signInIntent
         
         return Tasks.await(signInClient.silentSignIn())
             ?: throw IllegalStateException("Google Sign-In failed")

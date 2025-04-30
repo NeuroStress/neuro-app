@@ -15,24 +15,57 @@ import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class BleManagerImpl(context: Context) : BleManager(context) {
+/**
+ * Интерфейс для работы с BLE-устройствами.
+ * Определяет методы для чтения физиологических данных.
+ */
+interface BleManager {
+    /**
+     * Считывает значение GSR (кожно-гальванической реакции) с BLE-устройства.
+     * @param device Устройство Bluetooth.
+     * @return Значение GSR в микросименсах.
+     */
+    suspend fun readGsr(device: BluetoothDevice): Float
+
+    /**
+     * Считывает температуру кожи с BLE-устройства.
+     * @param device Устройство Bluetooth.
+     * @return Температура кожи в градусах Цельсия.
+     */
+    suspend fun readSkinTemp(device: BluetoothDevice): Float
+
+    /**
+     * Считывает модуль ускорения с BLE-устройства.
+     * @param device Устройство Bluetooth.
+     * @return Модуль ускорения в м/с².
+     */
+    suspend fun readAccel(device: BluetoothDevice): Float
+}
+
+/**
+ * Реализация [BleManager] на основе библиотеки Nordic BLE.
+ * Обеспечивает подключение к BLE-устройствам и чтение характеристик.
+ *
+ * @property context Контекст приложения.
+ */
+class BleManagerImpl(context: Context) : no.nordicsemi.android.ble.BleManager(context), BleManager {
     companion object {
-        // UUID для GSR (пример, замените на реальные UUID вашего устройства)
+        /** UUID сервиса и характеристики для GSR (замените на реальные UUID вашего устройства) */
         private val GSR_SERVICE_UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
         private val GSR_CHARACTERISTIC_UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
         
-        // UUID для температуры кожи
+        /** UUID сервиса и характеристики для температуры кожи */
         private val SKIN_TEMP_SERVICE_UUID = UUID.fromString("00001809-0000-1000-8000-00805F9B34FB")
         private val SKIN_TEMP_CHARACTERISTIC_UUID = UUID.fromString("00002A1C-0000-1000-8000-00805F9B34FB")
         
-        // UUID для акселерометра
+        /** UUID сервиса и характеристики для акселерометра */
         private val ACCEL_SERVICE_UUID = UUID.fromString("0000180F-0000-1000-8000-00805F9B34FB")
         private val ACCEL_CHARACTERISTIC_UUID = UUID.fromString("00002A19-0000-1000-8000-00805F9B34FB")
     }
 
     private var gatt: BluetoothGatt? = null
 
-    suspend fun readGsr(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
+    override suspend fun readGsr(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
         connect(device)
             .useAutoConnect(false)
             .timeout(10000)
@@ -48,7 +81,7 @@ class BleManagerImpl(context: Context) : BleManager(context) {
             .enqueue()
     }
 
-    suspend fun readSkinTemp(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
+    override suspend fun readSkinTemp(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
         connect(device)
             .useAutoConnect(false)
             .timeout(10000)
@@ -62,7 +95,7 @@ class BleManagerImpl(context: Context) : BleManager(context) {
             .enqueue()
     }
 
-    suspend fun readAccel(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
+    override suspend fun readAccel(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
         connect(device)
             .useAutoConnect(false)
             .timeout(10000)
@@ -79,6 +112,12 @@ class BleManagerImpl(context: Context) : BleManager(context) {
             .enqueue()
     }
 
+    /**
+     * Читает значение характеристики BLE-устройства.
+     * @param gatt Объект GATT для работы с BLE.
+     * @param serviceUuid UUID сервиса.
+     * @param characteristicUuid UUID характеристики.
+     */
     private fun readCharacteristic(
         gatt: BluetoothGatt,
         serviceUuid: UUID,
