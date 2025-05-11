@@ -1,7 +1,7 @@
 package com.example.stressmonitor.data
 
 import android.content.Context
-import com.example.stressmonitor.domain.model.StressLevel
+import com.example.stressmonitor.model.StressLevel
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
 import java.io.IOException

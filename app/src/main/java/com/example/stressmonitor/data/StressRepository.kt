@@ -1,8 +1,8 @@
 package com.example.stressmonitor.data
 
 import android.bluetooth.BluetoothDevice
-import com.example.stressmonitor.domain.model.SensorData
-import com.example.stressmonitor.domain.model.StressLevel
+import com.example.stressmonitor.model.SensorData
+import com.example.stressmonitor.model.StressLevel
 
 /**
  * Репозиторий для работы с данными о стрессе.

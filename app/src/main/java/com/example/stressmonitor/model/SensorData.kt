@@ -1,13 +1,27 @@
-package com.example.stressmonitor.domain.model
+package com.example.stressmonitor.model
 
+/**
+ * Класс для хранения данных с сенсоров.
+ * Содержит все необходимые физиологические показатели для анализа стресса.
+ *
+ * @property heartRate Частота сердечных сокращений (ударов в минуту).
+ * @property hrv Вариабельность сердечного ритма (миллисекунды).
+ * @property gsr Кожно-гальваническая реакция (микросименсы).
+ * @property skinTemp Температура кожи (градусы Цельсия).
+ * @property accel Данные акселерометра (g).
+ */
 data class SensorData(
-    val heartRate: Float,      // bpm
-    val hrv: Float,            // SDNN или другой HF/LF показатель
-    val gsr: Float,            // skin conductance
-    val skinTemp: Float,       // °C
-    val accelMagnitude: Float  // RMS ускорения за сэмпл
+    val heartRate: Float,
+    val hrv: Float,
+    val gsr: Float,
+    val skinTemp: Float,
+    val accel: Float
 ) {
-    fun toFloatArray(): FloatArray = floatArrayOf(
-        heartRate, hrv, gsr, skinTemp, accelMagnitude
-    )
+    /**
+     * Преобразует данные сенсоров в массив float для передачи в модель.
+     * @return Массив значений в порядке: ЧСС, ВСР, КГР, температура, акселерометр.
+     */
+    fun toFloatArray(): FloatArray {
+        return floatArrayOf(heartRate, hrv, gsr, skinTemp, accel)
+    }
 }

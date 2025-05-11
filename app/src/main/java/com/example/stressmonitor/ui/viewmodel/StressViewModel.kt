@@ -1,17 +1,19 @@
+// app/src/main/java/com/example/stressmonitor/ui/viewmodel/StressViewModel.kt
 package com.example.stressmonitor.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.stressmonitor.domain.model.StressLevel
 import com.example.stressmonitor.domain.usecase.GetStressLevelUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.example.stressmonitor.model.StressLevel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class StressViewModel(
+@HiltViewModel
+class StressViewModel @Inject constructor(
     private val getStressLevelUseCase: GetStressLevelUseCase
-) : ViewModel() {
+): ViewModel(){
     private val _stressLevel = MutableStateFlow<StressLevel?>(null)
     val stressLevel: StateFlow<StressLevel?> = _stressLevel.asStateFlow()
 
@@ -23,15 +25,15 @@ class StressViewModel(
 
     fun fetchStressLevel() {
         viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
             try {
-                _isLoading.value = true
-                _error.value = null
                 _stressLevel.value = getStressLevelUseCase()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Произошла ошибка"
+                _error.value = e.message ?: "Ошибка"
             } finally {
                 _isLoading.value = false
             }
         }
     }
-} 
+}

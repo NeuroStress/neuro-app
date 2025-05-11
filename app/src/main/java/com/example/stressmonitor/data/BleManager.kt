@@ -1,148 +1,164 @@
 package com.example.stressmonitor.data
 
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothProfile
+import android.Manifest
+import android.bluetooth.*
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.suspendCancellableCoroutine
-import no.nordicsemi.android.ble.BleManager
-import no.nordicsemi.android.ble.callback.DataReceivedCallback
-import no.nordicsemi.android.ble.data.Data
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.sqrt
 
 /**
  * Интерфейс для работы с BLE-устройствами.
  * Определяет методы для чтения физиологических данных.
  */
 interface BleManager {
-    /**
-     * Считывает значение GSR (кожно-гальванической реакции) с BLE-устройства.
-     * @param device Устройство Bluetooth.
-     * @return Значение GSR в микросименсах.
-     */
+    /** @return GSR в микросименсах. */
     suspend fun readGsr(device: BluetoothDevice): Float
 
-    /**
-     * Считывает температуру кожи с BLE-устройства.
-     * @param device Устройство Bluetooth.
-     * @return Температура кожи в градусах Цельсия.
-     */
+    /** @return Температура кожи в °C. */
     suspend fun readSkinTemp(device: BluetoothDevice): Float
 
-    /**
-     * Считывает модуль ускорения с BLE-устройства.
-     * @param device Устройство Bluetooth.
-     * @return Модуль ускорения в м/с².
-     */
+    /** @return Модуль ускорения в m/s². */
     suspend fun readAccel(device: BluetoothDevice): Float
 }
 
 /**
- * Реализация [BleManager] на основе библиотеки Nordic BLE.
- * Обеспечивает подключение к BLE-устройствам и чтение характеристик.
- *
- * @property context Контекст приложения.
+ * Реализация [BleManager] на чистом Android BLE + Coroutines.
  */
-class BleManagerImpl(context: Context) : no.nordicsemi.android.ble.BleManager(context), BleManager {
+class BleManagerImpl(
+    private val context: Context
+) : BleManager {
+
     companion object {
-        /** UUID сервиса и характеристики для GSR (замените на реальные UUID вашего устройства) */
-        private val GSR_SERVICE_UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
-        private val GSR_CHARACTERISTIC_UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
-        
-        /** UUID сервиса и характеристики для температуры кожи */
-        private val SKIN_TEMP_SERVICE_UUID = UUID.fromString("00001809-0000-1000-8000-00805F9B34FB")
-        private val SKIN_TEMP_CHARACTERISTIC_UUID = UUID.fromString("00002A1C-0000-1000-8000-00805F9B34FB")
-        
-        /** UUID сервиса и характеристики для акселерометра */
-        private val ACCEL_SERVICE_UUID = UUID.fromString("0000180F-0000-1000-8000-00805F9B34FB")
-        private val ACCEL_CHARACTERISTIC_UUID = UUID.fromString("00002A19-0000-1000-8000-00805F9B34FB")
+        private val GSR_SERVICE_UUID               = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
+        private val GSR_CHARACTERISTIC_UUID        = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
+
+        private val SKIN_TEMP_SERVICE_UUID         = UUID.fromString("00001809-0000-1000-8000-00805F9B34FB")
+        private val SKIN_TEMP_CHARACTERISTIC_UUID  = UUID.fromString("00002A1C-0000-1000-8000-00805F9B34FB")
+
+        private val ACCEL_SERVICE_UUID             = UUID.fromString("0000180F-0000-1000-8000-00805F9B34FB")
+        private val ACCEL_CHARACTERISTIC_UUID      = UUID.fromString("00002A19-0000-1000-8000-00805F9B34FB")
     }
 
-    private var gatt: BluetoothGatt? = null
-
-    override suspend fun readGsr(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
-        connect(device)
-            .useAutoConnect(false)
-            .timeout(10000)
-            .usePreferredPhy(BluetoothDevice.PHY_LE_1M_MASK)
-            .then { gatt ->
-                this.gatt = gatt
-                readCharacteristic(gatt, GSR_SERVICE_UUID, GSR_CHARACTERISTIC_UUID)
-            }
-            .with { data ->
-                val value = data.getFloatValue(Data.FORMAT_FLOAT, 0)
-                cont.resume(value)
-            }
-            .enqueue()
+    override suspend fun readGsr(device: BluetoothDevice): Float {
+        val raw = readCharacteristic(device, GSR_SERVICE_UUID, GSR_CHARACTERISTIC_UUID)
+        return ByteBuffer.wrap(raw)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .float
     }
 
-    override suspend fun readSkinTemp(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
-        connect(device)
-            .useAutoConnect(false)
-            .timeout(10000)
-            .then { gatt ->
-                readCharacteristic(gatt, SKIN_TEMP_SERVICE_UUID, SKIN_TEMP_CHARACTERISTIC_UUID)
-            }
-            .with { data ->
-                val value = data.getFloatValue(Data.FORMAT_FLOAT, 0)
-                cont.resume(value)
-            }
-            .enqueue()
+    override suspend fun readSkinTemp(device: BluetoothDevice): Float {
+        val raw = readCharacteristic(device, SKIN_TEMP_SERVICE_UUID, SKIN_TEMP_CHARACTERISTIC_UUID)
+        return ByteBuffer.wrap(raw)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .float
     }
 
-    override suspend fun readAccel(device: BluetoothDevice): Float = suspendCancellableCoroutine { cont ->
-        connect(device)
-            .useAutoConnect(false)
-            .timeout(10000)
-            .then { gatt ->
-                readCharacteristic(gatt, ACCEL_SERVICE_UUID, ACCEL_CHARACTERISTIC_UUID)
-            }
-            .with { data ->
-                val x = data.getFloatValue(Data.FORMAT_FLOAT, 0)
-                val y = data.getFloatValue(Data.FORMAT_FLOAT, 4)
-                val z = data.getFloatValue(Data.FORMAT_FLOAT, 8)
-                val magnitude = Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
-                cont.resume(magnitude)
-            }
-            .enqueue()
+    override suspend fun readAccel(device: BluetoothDevice): Float {
+        val raw = readCharacteristic(device, ACCEL_SERVICE_UUID, ACCEL_CHARACTERISTIC_UUID)
+        val buf = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
+        val x = buf.float
+        val y = buf.float
+        val z = buf.float
+        return sqrt((x * x + y * y + z * z).toDouble()).toFloat()
     }
 
     /**
-     * Читает значение характеристики BLE-устройства.
-     * @param gatt Объект GATT для работы с BLE.
-     * @param serviceUuid UUID сервиса.
-     * @param characteristicUuid UUID характеристики.
+     * Connects, discovers services, reads the given characteristic, then closes the GATT.
+     * Throws on failure, or if BLUETOOTH_CONNECT isn’t granted.
      */
-    private fun readCharacteristic(
-        gatt: BluetoothGatt,
+    private suspend fun readCharacteristic(
+        device: BluetoothDevice,
         serviceUuid: UUID,
         characteristicUuid: UUID
-    ) {
-        val service = gatt.getService(serviceUuid)
-        val characteristic = service?.getCharacteristic(characteristicUuid)
-        if (characteristic != null) {
-            gatt.readCharacteristic(characteristic)
+    ): ByteArray = suspendCancellableCoroutine { cont ->
+        // 1. Permission check (Android 12+)
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            cont.resumeWithException(SecurityException("Bluetooth CONNECT permission not granted"))
+            return@suspendCancellableCoroutine
         }
-    }
 
-    override fun getGattCallback(): BluetoothGattCallback {
-        return object : BluetoothGattCallback() {
-            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+        var gatt: BluetoothGatt? = null
+        val mainHandler = Handler(Looper.getMainLooper())
+
+        val callback = object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    cont.resumeWithException(Exception("Connection failed (status=$status)"))
+                    cleanup()
+                    return
+                }
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    gatt.discoverServices()
+                    gatt = g
+                    // Need to call discoverServices on the main thread
+                    mainHandler.post { g.discoverServices() }
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    cont.resumeWithException(Exception("Disconnected before operation"))
+                    cleanup()
                 }
             }
 
-            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                if (status == BluetoothGatt.GATT_SUCCESS) {
-                    // Уведомляем о готовности к чтению характеристик
+            override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    cont.resumeWithException(Exception("Service discovery failed (status=$status)"))
+                    cleanup()
+                    return
+                }
+                val svc = g.getService(serviceUuid)
+                    ?: run {
+                        cont.resumeWithException(Exception("Service $serviceUuid not found"))
+                        cleanup()
+                        return
+                    }
+                val chr = svc.getCharacteristic(characteristicUuid)
+                    ?: run {
+                        cont.resumeWithException(Exception("Characteristic $characteristicUuid not found"))
+                        cleanup()
+                        return
+                    }
+                mainHandler.post { g.readCharacteristic(chr) }
+            }
+
+            override fun onCharacteristicRead(
+                g: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                status: Int
+            ) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    cont.resumeWithException(Exception("Read failed (status=$status)"))
+                } else {
+                    cont.resume(characteristic.value)
+                }
+                cleanup()
+            }
+
+            private fun cleanup() {
+                gatt?.let {
+                    mainHandler.post {
+                        it.disconnect()
+                        it.close()
+                    }
                 }
             }
+        }
+
+        // 2. Kick off the connection
+        gatt = device.connectGatt(context, false, callback)
+
+        // 3. If coroutine is cancelled, tear down
+        cont.invokeOnCancellation {
+            gatt?.disconnect()
+            gatt?.close()
         }
     }
 }

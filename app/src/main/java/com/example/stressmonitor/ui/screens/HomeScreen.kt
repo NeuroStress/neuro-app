@@ -8,14 +8,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.stressmonitor.domain.model.StressLevel
+import com.example.stressmonitor.model.StressLevel
 import com.example.stressmonitor.ui.viewmodel.StressViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun HomeScreen(
-    viewModel: StressViewModel = viewModel()
-) {
+    viewModel: StressViewModel = hiltViewModel()
+)
+
+{
     val stressLevel by viewModel.stressLevel.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()

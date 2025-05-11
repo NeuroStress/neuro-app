@@ -2,9 +2,8 @@ plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
-    id("com.google.dagger.hilt.android")    // подключаем Hilt без указания версии
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" // this version matches your Kotlin version
-
+    id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
 }
 
 android {
@@ -13,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.stressmonitor"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
@@ -28,7 +27,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.4.0"
     }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -38,15 +36,14 @@ android {
             )
         }
     }
-
-
 }
 
 dependencies {
-
-    // AndroidX Core & AppCompat
+    // AndroidX
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.health.connect:connect-client:1.1.0-rc01")
+
 
     // Compose
     implementation("androidx.compose.ui:ui:1.8.1")
@@ -58,8 +55,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.0")
 
     // BLE (Nordic)
-    implementation("no.nordicsemi.android:ble:2.4.3")
-    implementation("no.nordicsemi.android:ble-ktx:2.4.3")
+    implementation("no.nordicsemi.android:ble:2.10.0")
+    implementation("no.nordicsemi.android:ble-ktx:2.10.0")
 
     // Google Fit
     implementation("com.google.android.gms:play-services-fitness:21.2.0")
@@ -76,7 +73,7 @@ dependencies {
 
     // Hilt & Hilt Compose
     implementation("com.google.dagger:hilt-android:2.49")
-    kapt("com.google.dagger:hilt-compiler:2.47")
+    kapt("com.google.dagger:hilt-compiler:2.49")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Hilt + ViewModel
