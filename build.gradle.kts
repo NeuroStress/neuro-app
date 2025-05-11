@@ -1,11 +1,6 @@
 // build.gradle.kts (корень)
 plugins {
-    id("com.android.application") version "7.3.1" apply false
-    kotlin("android") version "1.7.10" apply false
-}
-subprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+    id("com.android.application") version "8.9.2" apply false
+    id("org.jetbrains.kotlin.android") version "2.0.0" apply false
+
 }

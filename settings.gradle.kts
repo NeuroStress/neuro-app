@@ -1,8 +1,16 @@
 pluginManagement {
     repositories {
-        google()
+        gradlePluginPortal()    // для Kotlin DSL
+        google()                // плагин Android и Hilt
         mavenCentral()
-        gradlePluginPortal()
+    }
+    plugins {
+        // Подписываем плагин Hilt, чтобы его можно было вызывать в модулях
+        id("com.google.dagger.hilt.android") version "2.47"
+        // И Android-gradle-plugin, Kotlin-плагин, если вы хотите
+        id("com.android.application") version "8.9.2"
+        kotlin("android") version "1.9.0"
+        kotlin("kapt") version "1.9.0"
     }
 }
 
@@ -14,5 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "StressMonitor"
-include(":app") 
+
+rootProject.name = "MyStressApp"
+include(":app")
